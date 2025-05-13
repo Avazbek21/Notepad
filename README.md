@@ -1,2 +1,2 @@
 # Notepad
-Notepad - собственный блокнот, на подобии Стандартного Notepad Windows
+Notepad - собственный Блокнот, на подобии Стандартного Notepad Windows
