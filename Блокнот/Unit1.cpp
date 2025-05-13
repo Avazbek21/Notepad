@@ -1,0 +1,307 @@
+#include <vcl.h>
+#pragma hdrstop
+
+#include "Unit1.h"
+#include "Unit2.h"
+#include "Unit3.h"
+#include <IniFiles.hpp>
+//---------------------------------------------------------------------------
+#pragma package(smart_init)
+#pragma resource "*.dfm"
+TNotepad *Notepad;
+bool i, move=false;
+int cntfnt=0, cnttxt=0;  // счётчики циклов
+int cntword=0;    //счётчик кол-ва слов.
+String ntext="";  //переменная для записи текста перед проверкой кол-во слов
+String textcheck="";
+AnsiString save;  //работа с файлом
+TIniFile *Parametres=new TIniFile("Parametres.ini");
+TIniFile *HotKeys=new TIniFile("HotKeys.ini");
+int ytop=0,xleft=0, sttop;
+//---------------------------------------------------------------------------
+__fastcall TNotepad::TNotepad(TComponent* Owner)
+    : TForm(Owner)
+{
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::FormCreate(TObject *Sender)
+{
+ BCreate->ShortCut=HotKeys->ReadInteger("Hot Keys","Create",16462);
+ BOpen->ShortCut=HotKeys->ReadInteger("Hot Keys","Open",16463);
+ BSave->ShortCut=HotKeys->ReadInteger("Hot Keys","Save",16467);
+ BSaveas->ShortCut=HotKeys->ReadInteger("Hot Keys","Save As",49235);
+ BSettinghotkeys->ShortCut=HotKeys->ReadInteger("Hot Keys","ShortCut",16459);
+ BExit->ShortCut=HotKeys->ReadInteger("Hot Keys","Exit",16472);
+
+ BNow->ShortCut=HotKeys->ReadInteger("Hot Keys","Time and Date",16468);
+
+ BWordwrap->ShortCut=HotKeys->ReadInteger("Hot Keys","Word wrap",16471);
+ BFont->ShortCut=HotKeys->ReadInteger("Hot Keys","Font",24646);
+
+ BStringstate->ShortCut=HotKeys->ReadInteger("Hot Keys","String state",16465);
+
+ BAboutprogram->ShortCut=HotKeys->ReadInteger("Hot Keys","About program",16449);
+
+ ClientWidth=Parametres->ReadInteger("Size of Notepad","Width Notepad",535);
+ ClientHeight=Parametres->ReadInteger("Size of Notepad","Height Notepad",501);
+
+ Notepad->Left=Parametres->ReadInteger("Coordinate of Notepad","Left Notepad",695);
+ Notepad->Top=Parametres->ReadInteger("Coordinate of Notepad","Top Notepad",255);
+
+ Memo1->Font->Name=Parametres->ReadString("Font","Name","Times New Roman");
+ Memo1->Font->Size=Parametres->ReadInteger("Font","Size",14);
+
+ BWordwrap->Checked=Parametres->ReadBool("Checked","Word wrap",true);
+ BStringstate->Enabled=Parametres->ReadBool("Checked","String state enabled",false);
+ BStringstate->Checked=Parametres->ReadBool("Checked","String state checked",false);
+
+ i=BStringstate->Checked;
+ CSizeFont->Text=Memo1->Font->Size;
+ for(cntfnt=0;cntfnt<Screen->Fonts->Count;cntfnt++)         //запись названий
+     CNameFont->Items->Add(Screen->Fonts->Strings[cntfnt]); //шрифтов в список выбора
+ CNameFont->Text=Memo1->Font->Name;
+ CountString->Caption=Memo1->Lines->Count;
+ CountWords->Caption=IntToStr(cntword);
+ CountSimbols->Caption=Memo1->GetTextLen();
+ sttop=426;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::BFixstateClick(TObject *Sender)   //фиксированый размер Notepad
+{
+ if(BFixstate->Checked) {
+     ClientHeight=501;
+     ClientWidth=535;
+ }
+ Notepad->OnResize(Sender);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::BNowClick(TObject *Sender)  //Время и дата
+{
+ Memo1->Lines->Add(Time().TimeString()+"   "+Date());
+}
+//---------------------------------------------------------------------------
+
+
+void __fastcall TNotepad::BFontClick(TObject *Sender)  //font
+{
+ FontDialog1->Font=Memo1->Font;
+ if (FontDialog1->Execute()) {
+     Memo1->Font->Assign(FontDialog1->Font);
+ }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::BAboutprogramClick(TObject *Sender) //о программе
+{
+ Form2->ShowModal();
+}
+//---------------------------------------------------------------------------
+void __fastcall TNotepad::BWordwrapClick(TObject *Sender) //word wrap
+{
+ if(BWordwrap->Checked==false) {
+     BStringstate->Enabled=true;
+     if(i==true) {
+        BStringstate->Checked=true;
+     }else {
+        BStringstate->Checked=false;
+     }
+ }else {
+     BStringstate->Enabled=false;
+     BStringstate->Checked=false;
+ }
+ Notepad->OnResize(Sender);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::BCreateClick(TObject *Sender)   //create
+{
+ if (Memo1->Lines->Count>0){
+    if (MessageBoxA(0,"Сохранить текст","Сохранить?",MB_YESNO|MB_ICONQUESTION)==IDYES){
+        if (SaveDialog1->Execute()){
+            Memo1->Lines->SaveToFile(SaveDialog1->FileName);
+            }
+    }
+ }else{
+        Memo1->Lines->Clear();
+        BSaveas->Click();
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::BOpenClick(TObject *Sender)  //open
+{
+    if (OpenDialog1->Execute()) {
+        save=OpenDialog1->FileName.c_str();
+        Memo1->Lines->LoadFromFile(save);
+        textcheck=Memo1->Text;
+    }
+}
+//---------------------------------------------------------------------------
+void __fastcall TNotepad::BSaveClick(TObject *Sender) //save
+{
+ if(save!="")
+     Memo1->Lines->SaveToFile(save);
+ else if(SaveDialog1->Execute()) {
+     save=SaveDialog1->FileName.c_str();
+     Memo1->Lines->SaveToFile(save);
+ }
+}
+//---------------------------------------------------------------------------
+void __fastcall TNotepad::BSaveasClick(TObject *Sender) //save as...
+{
+    if (SaveDialog1->Execute()){
+        save=SaveDialog1->FileName.c_str();
+        Memo1->Lines->SaveToFile(save);
+    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::CSizeFontClick(TObject *Sender) //изменение размера шрифта
+{
+ Memo1->Font->Size=CSizeFont->Text.ToInt();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::CNameFontClick(TObject *Sender)
+{
+ Memo1->Font->Name=CNameFont->Text;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::Memo1Change(TObject *Sender)
+{
+ if(BStringstate->Checked) {
+     CountString->Caption=Memo1->Lines->Count;
+     CountSimbols->Caption=Memo1->GetTextLen();
+     cntword=0;
+     if( Memo1->Text!="") {
+         ntext=Memo1->Text;
+         for( cnttxt=1; cnttxt<ntext.Length(); cnttxt++ )
+             if( ntext[cnttxt]!=' ' && ntext[cnttxt+1]==' ') cntword++;
+     }
+     CountWords->Caption=IntToStr(cntword);
+ }
+}
+//---------------------------------------------------------------------------
+void __fastcall TNotepad::FormResize(TObject *Sender)
+{
+ Memo1->Width=ClientWidth;
+ if(BWordwrap->Checked==true)
+     Memo1->ScrollBars=ssVertical;
+ else
+     Memo1->ScrollBars=ssBoth;
+ if(BStringstate->Checked==true) {
+     StringState->Visible=true;
+     if(BFixstate->Checked) {
+         Memo1->Height=ClientHeight-StringState->Height;
+         StringState->Width=ClientWidth;
+         StringState->Top=Memo1->Height+1;
+         StringState->Left=0;
+     }else {
+         Memo1->Height=ClientHeight;
+     }
+ }else {
+     StringState->Visible=false;
+     Memo1->Height=ClientHeight;
+ }
+ CountString->Caption=Memo1->Lines->Count;
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::BStringstateClick(TObject *Sender)
+{
+ if(BStringstate->Checked) {
+     i=true;
+ }else {
+     i=false;
+ }
+ Notepad->OnResize(Sender);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::BSettinghotkeysClick(TObject *Sender)
+{
+ Form3->ShowModal();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::BExitClick(TObject *Sender)   //exit
+{
+ Close();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::FormClose(TObject *Sender, TCloseAction &Action)
+{
+ Parametres->WriteBool("Checked","Word wrap",BWordwrap->Checked);
+ Parametres->WriteBool("Checked","String state enabled",BStringstate->Enabled);
+ if(!BStringstate->Enabled)
+     i=false;
+ Parametres->WriteBool("Checked","String state checked",i);
+ Parametres->WriteInteger("Coordinate of Notepad","Left Notepad",Notepad->Left);
+ Parametres->WriteInteger("Coordinate of Notepad","Top Notepad",Notepad->Top);
+ Parametres->WriteInteger("Size of Notepad","Height",ClientHeight);
+ Parametres->WriteInteger("Size of Notepad","Width",ClientWidth);
+ Parametres->WriteString("Font","Name",Memo1->Font->Name);
+ Parametres->WriteInteger("Font","Size",Memo1->Font->Size);
+}
+//---------------------------------------------------------------------------
+void __fastcall TNotepad::StringStateMouseDown(TObject *Sender,
+      TMouseButton Button, TShiftState Shift, int X, int Y)
+{
+ if(!BFixstate->Checked) {
+     if(Button!=mbLeft) return;
+         xleft=X;
+         ytop=Y;
+         move = true;
+         ((TControl *)Sender)->BringToFront();
+ }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::StringStateMouseMove(TObject *Sender,
+      TShiftState Shift, int X, int Y)
+{
+ if(move) {
+     TImage * Pn = (TImage *)Sender;
+     Pn->SetBounds(Pn->Left+X-xleft,Pn->Top+Y-ytop,Pn->Width,Pn->Height);
+     sttop=StringState->Top;
+ }
+}
+//---------------------------------------------------------------------------
+void __fastcall TNotepad::StringStateMouseUp(TObject *Sender,
+      TMouseButton Button, TShiftState Shift, int X, int Y)
+{
+ Memo1->Height=ClientHeight;
+ move=false;
+}
+//---------------------------------------------------------------------------
+//Buttons in String State
+//---------------------------------------------------------------------------
+void __fastcall TNotepad::SpeedCreateClick(TObject *Sender)  //Create
+{
+ BCreate->OnClick(Sender);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::SpeedOpenClick(TObject *Sender)    //Open
+{
+ BOpen->OnClick(Sender);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::SpeedSaveClick(TObject *Sender)    //Save
+{
+ BSave->OnClick(Sender);
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TNotepad::SpeedSaveasClick(TObject *Sender)  //Save as...
+{
+ BSaveas->OnClick(Sender);
+}
+//---------------------------------------------------------------------------
+
